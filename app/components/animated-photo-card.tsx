@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import { motion } from 'framer-motion'
-import { Heart, Download, Trash2 } from 'lucide-react'
-import { Photo } from '../context/photos-context'
+import { motion } from "framer-motion";
+import { Heart, Download, Trash2 } from "lucide-react";
+import { Photo } from "../context/photos-context";
 
 interface AnimatedPhotoCardProps {
-  photo: Photo
-  index: number
-  onLike: (id: string) => void
-  onDownload: (id: string) => void
-  onDelete: (id: string) => void
+  photo: Photo;
+  index: number;
+  onLike: (id: string) => void;
+  onDownload: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export function AnimatedPhotoCard({
@@ -26,21 +26,30 @@ export function AnimatedPhotoCard({
       transition={{
         duration: 0.5,
         delay: index * 0.1,
-        ease: 'easeOut',
+        ease: "easeOut",
       }}
       whileHover={{ scale: 1.02 }}
       className="h-full"
     >
       <div className="h-full border border-border rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm hover:shadow-lg transition-shadow group">
-        {/* Image */}
+        {/* Media */}
         <div className="relative w-full aspect-square overflow-hidden bg-muted">
-          <motion.img
-            src={photo.image}
-            alt={photo.title}
-            className="w-full h-full object-cover"
-            whileHover={{ scale: 1.1 }}
-            transition={{ duration: 0.3 }}
-          />
+          {photo.type === "video" ? (
+            <video
+              src={photo.video || photo.image}
+              className="w-full h-full object-cover"
+              controls
+              muted
+            />
+          ) : (
+            <motion.img
+              src={photo.image}
+              alt={photo.title}
+              className="w-full h-full object-cover"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.3 }}
+            />
+          )}
           <motion.div
             initial={{ opacity: 0 }}
             whileHover={{ opacity: 1 }}
@@ -86,12 +95,12 @@ export function AnimatedPhotoCard({
               onClick={() => onLike(photo.id)}
               className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors ${
                 photo.liked
-                  ? 'bg-accent text-accent-foreground'
-                  : 'bg-secondary/50 text-foreground hover:bg-secondary'
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-secondary/50 text-foreground hover:bg-secondary"
               }`}
             >
               <Heart
-                className={`w-4 h-4 ${photo.liked ? 'fill-current' : ''}`}
+                className={`w-4 h-4 ${photo.liked ? "fill-current" : ""}`}
               />
               <span className="text-xs font-medium">Like</span>
             </motion.button>
@@ -108,8 +117,8 @@ export function AnimatedPhotoCard({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                if (confirm('Delete this photo?')) {
-                  onDelete(photo.id)
+                if (confirm("Delete this photo?")) {
+                  onDelete(photo.id);
                 }
               }}
               className="flex items-center justify-center px-3 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
@@ -120,5 +129,5 @@ export function AnimatedPhotoCard({
         </div>
       </div>
     </motion.div>
-  )
+  );
 }

@@ -1,33 +1,39 @@
-'use client'
+"use client";
 
-import { motion } from 'framer-motion'
-import { Trash2, ZoomIn, Plus } from 'lucide-react'
-import { Property } from '../context/properties-context'
-import { useRef } from 'react'
+import { motion } from "framer-motion";
+import { Trash2, ZoomIn, Plus } from "lucide-react";
+import { Property } from "../context/properties-context";
+import { useRef } from "react";
 
 interface PropertyCardProps {
-  property: Property
-  index: number
-  onImageClick: (imgIndex: number) => void
-  onDelete: () => void
-  onAddImages: (images: string[]) => void
+  property: Property;
+  index: number;
+  onImageClick: (imgIndex: number) => void;
+  onDelete: () => void;
+  onAddImages: (images: string[]) => void;
 }
 
-export function PropertyCard({ property, index, onImageClick, onDelete, onAddImages }: PropertyCardProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
+export function PropertyCard({
+  property,
+  index,
+  onImageClick,
+  onDelete,
+  onAddImages,
+}: PropertyCardProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files) {
       Array.from(files).forEach((file) => {
-        const reader = new FileReader()
+        const reader = new FileReader();
         reader.onload = (event) => {
-          onAddImages([event.target?.result as string])
-        }
-        reader.readAsDataURL(file)
-      })
+          onAddImages([event.target?.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
-  }
+  };
 
   return (
     <motion.div
@@ -44,11 +50,20 @@ export function PropertyCard({ property, index, onImageClick, onDelete, onAddIma
           onClick={() => onImageClick(0)}
           className="relative w-full aspect-video bg-muted overflow-hidden cursor-pointer flex items-center justify-center group/img flex-shrink-0"
         >
-          <img
-            src={property.images[0]}
-            alt={property.name}
-            className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300"
-          />
+          {property.images[0].startsWith("data:video/") ? (
+            <video
+              src={property.images[0]}
+              className="w-full h-full object-cover"
+              muted
+              playsInline
+            />
+          ) : (
+            <img
+              src={property.images[0]}
+              alt={property.name}
+              className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300"
+            />
+          )}
           <motion.div
             initial={{ opacity: 0 }}
             whileHover={{ opacity: 1 }}
@@ -72,7 +87,7 @@ export function PropertyCard({ property, index, onImageClick, onDelete, onAddIma
         >
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Plus className="w-8 h-8" />
-            <span className="text-sm font-medium">Add Image</span>
+            <span className="text-sm font-medium">Add Media</span>
           </div>
         </motion.button>
       )}
@@ -84,14 +99,15 @@ export function PropertyCard({ property, index, onImageClick, onDelete, onAddIma
             {property.name}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2">
-            {property.description || 'No description'}
+            {property.description || "No description"}
           </p>
         </div>
 
         {/* Image Count */}
         {property.images.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            {property.images.length} image{property.images.length !== 1 ? 's' : ''}
+            {property.images.length} item
+            {property.images.length !== 1 ? "s" : ""}
           </p>
         )}
 
@@ -104,7 +120,7 @@ export function PropertyCard({ property, index, onImageClick, onDelete, onAddIma
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
           >
             <Plus className="w-4 h-4" />
-            Add Photo
+            Add Media
           </motion.button>
         )}
 
@@ -113,8 +129,8 @@ export function PropertyCard({ property, index, onImageClick, onDelete, onAddIma
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.95 }}
           onClick={(e) => {
-            e.stopPropagation()
-            onDelete()
+            e.stopPropagation();
+            onDelete();
           }}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
         >
@@ -133,5 +149,5 @@ export function PropertyCard({ property, index, onImageClick, onDelete, onAddIma
         className="hidden"
       />
     </motion.div>
-  )
+  );
 }

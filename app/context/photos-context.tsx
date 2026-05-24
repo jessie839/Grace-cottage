@@ -1,210 +1,234 @@
-'use client'
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 export interface Folder {
-  id: string
-  name: string
-  description?: string
-  createdDate: string
-  photoCount: number
+  id: string;
+  name: string;
+  description?: string;
+  createdDate: string;
+  photoCount: number;
 }
 
 export interface Photo {
-  id: string
-  title: string
-  description: string
-  image: string
-  video?: string
-  folderId: string
-  likes: number
-  downloads: number
-  uploadDate: string
-  liked: boolean
-  type: 'photo' | 'video'
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  video?: string;
+  folderId: string;
+  likes: number;
+  downloads: number;
+  uploadDate: string;
+  liked: boolean;
+  type: "photo" | "video";
 }
 
 interface PhotosContextType {
-  folders: Folder[]
-  photos: Photo[]
-  addFolder: (name: string, description?: string) => string
-  deleteFolder: (id: string) => void
-  renameFolder: (id: string, name: string) => void
-  addPhoto: (photo: Omit<Photo, 'id' | 'likes' | 'downloads' | 'liked'>) => void
-  addMultiplePhotos: (photos: Omit<Photo, 'id' | 'likes' | 'downloads' | 'liked'>[]) => void
-  deletePhoto: (id: string) => void
-  toggleLike: (id: string) => void
-  downloadPhoto: (id: string) => void
-  getPhotosByFolder: (folderId: string) => Photo[]
+  folders: Folder[];
+  photos: Photo[];
+  addFolder: (name: string, description?: string) => Promise<string>;
+  deleteFolder: (id: string) => Promise<void>;
+  renameFolder: (id: string, name: string) => Promise<void>;
+  addPhoto: (
+    photo: Omit<Photo, "id" | "likes" | "downloads" | "liked">,
+  ) => Promise<void>;
+  addMultiplePhotos: (
+    photos: Omit<Photo, "id" | "likes" | "downloads" | "liked">[],
+  ) => Promise<void>;
+  deletePhoto: (id: string) => Promise<void>;
+  toggleLike: (id: string) => Promise<void>;
+  downloadPhoto: (id: string) => Promise<void>;
+  getPhotosByFolder: (folderId: string) => Photo[];
 }
 
-const PhotosContext = createContext<PhotosContextType | undefined>(undefined)
-
-const defaultFolders: Folder[] = [
-  {
-    id: '1',
-    name: 'Summer Party',
-    description: 'Beautiful summer celebration photos',
-    createdDate: new Date().toISOString(),
-    photoCount: 1,
-  },
-  {
-    id: '2',
-    name: 'Evening Gala',
-    description: 'Elegant evening event',
-    createdDate: new Date(Date.now() - 86400000).toISOString(),
-    photoCount: 1,
-  },
-]
-
-const defaultPhotos: Photo[] = [
-  {
-    id: '1',
-    title: 'Summer Garden Party',
-    description: 'Beautiful sunset over the garden',
-    image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23d4a574" width="400" height="300"/%3E%3Crect fill="%23f5deb3" y="200" width="400" height="100"/%3E%3Ccircle cx="300" cy="80" r="40" fill="%23ffa500"/%3E%3C/svg%3E',
-    folderId: '1',
-    likes: 42,
-    downloads: 15,
-    uploadDate: new Date().toISOString(),
-    liked: false,
-  },
-  {
-    id: '2',
-    title: 'Evening Celebration',
-    description: 'Guests enjoying the evening entertainment',
-    image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e8d4c4" width="400" height="300"/%3E%3Crect fill="%23c19a6b" y="100" width="400" height="200"/%3E%3Ccircle cx="100" cy="100" r="30" fill="%23f5f5dc"/%3E%3Ccircle cx="200" cy="80" r="25" fill="%23f5f5dc"/%3E%3C/svg%3E',
-    folderId: '2',
-    likes: 38,
-    downloads: 12,
-    uploadDate: new Date(Date.now() - 86400000).toISOString(),
-    liked: false,
-  },
-]
+const PhotosContext = createContext<PhotosContextType | undefined>(undefined);
 
 export function PhotosProvider({ children }: { children: React.ReactNode }) {
-  const [folders, setFolders] = useState<Folder[]>(defaultFolders)
-  const [photos, setPhotos] = useState<Photo[]>(defaultPhotos)
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
 
   useEffect(() => {
-    const storedFolders = localStorage.getItem('grace_folders')
-    const storedPhotos = localStorage.getItem('grace_photos')
-    
-    if (storedFolders) {
+    async function loadData() {
       try {
-        setFolders(JSON.parse(storedFolders))
-      } catch {
-        setFolders(defaultFolders)
-      }
-    }
-
-    if (storedPhotos) {
-      try {
-        setPhotos(JSON.parse(storedPhotos))
-      } catch {
-        setPhotos(defaultPhotos)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem('grace_folders', JSON.stringify(folders))
-  }, [folders])
-
-  useEffect(() => {
-    localStorage.setItem('grace_photos', JSON.stringify(photos))
-  }, [photos])
-
-  const addFolder = (name: string, description?: string): string => {
-    const newFolder: Folder = {
-      id: Date.now().toString(),
-      name,
-      description,
-      createdDate: new Date().toISOString(),
-      photoCount: 0,
-    }
-    setFolders([newFolder, ...folders])
-    return newFolder.id
-  }
-
-  const deleteFolder = (id: string) => {
-    setFolders(folders.filter(f => f.id !== id))
-    setPhotos(photos.filter(p => p.folderId !== id))
-  }
-
-  const renameFolder = (id: string, name: string) => {
-    setFolders(folders.map(f => (f.id === id ? { ...f, name } : f)))
-  }
-
-  const addPhoto = (photo: Omit<Photo, 'id' | 'likes' | 'downloads' | 'liked'>) => {
-    const newPhoto: Photo = {
-      ...photo,
-      id: Date.now().toString(),
-      likes: 0,
-      downloads: 0,
-      liked: false,
-    }
-    setPhotos([newPhoto, ...photos])
-    // Update folder photo count
-    setFolders(folders.map(f => 
-      f.id === photo.folderId ? { ...f, photoCount: f.photoCount + 1 } : f
-    ))
-  }
-
-  const addMultiplePhotos = (newPhotos: Omit<Photo, 'id' | 'likes' | 'downloads' | 'liked'>[]) => {
-    const photosWithIds = newPhotos.map((photo, index) => ({
-      ...photo,
-      id: (Date.now() + index).toString(),
-      likes: 0,
-      downloads: 0,
-      liked: false,
-    }))
-    setPhotos([...photosWithIds, ...photos])
-    
-    // Update folder photo count
-    if (newPhotos.length > 0) {
-      const folderId = newPhotos[0].folderId
-      setFolders(folders.map(f => 
-        f.id === folderId ? { ...f, photoCount: f.photoCount + newPhotos.length } : f
-      ))
-    }
-  }
-
-  const deletePhoto = (id: string) => {
-    const photo = photos.find(p => p.id === id)
-    if (photo) {
-      setPhotos(photos.filter(p => p.id !== id))
-      setFolders(folders.map(f => 
-        f.id === photo.folderId ? { ...f, photoCount: Math.max(0, f.photoCount - 1) } : f
-      ))
-    }
-  }
-
-  const toggleLike = (id: string) => {
-    setPhotos(photos.map(p => {
-      if (p.id === id) {
-        return {
-          ...p,
-          liked: !p.liked,
-          likes: p.liked ? p.likes - 1 : p.likes + 1,
+        const res = await fetch("/api/photos", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("Failed to load shared data");
         }
-      }
-      return p
-    }))
-  }
 
-  const downloadPhoto = (id: string) => {
-    setPhotos(photos.map(p => {
-      if (p.id === id) {
-        return { ...p, downloads: p.downloads + 1 }
+        const data = await res.json();
+        setFolders(data.folders ?? []);
+        setPhotos(data.photos ?? []);
+      } catch (error) {
+        console.error("Unable to load shared photo data:", error);
+        setFolders([]);
+        setPhotos([]);
       }
-      return p
-    }))
-  }
+    }
+
+    loadData();
+  }, []);
+
+  const addFolder = async (
+    name: string,
+    description?: string,
+  ): Promise<string> => {
+    const res = await fetch("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to create folder");
+    }
+
+    const folder = await res.json();
+    setFolders((prev) => [folder, ...prev]);
+    return folder.id;
+  };
+
+  const deleteFolder = async (id: string) => {
+    const res = await fetch(`/api/folders/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      throw new Error("Failed to delete folder");
+    }
+
+    setFolders((prev) => prev.filter((folder) => folder.id !== id));
+    setPhotos((prev) => prev.filter((photo) => photo.folderId !== id));
+  };
+
+  const renameFolder = async (id: string, name: string) => {
+    const res = await fetch(`/api/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to rename folder");
+    }
+
+    const updated = await res.json();
+    setFolders((prev) =>
+      prev.map((folder) =>
+        folder.id === id ? { ...folder, name: updated.name } : folder,
+      ),
+    );
+  };
+
+  const addPhoto = async (
+    photo: Omit<Photo, "id" | "likes" | "downloads" | "liked">,
+  ) => {
+    const res = await fetch("/api/photos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photos: [photo] }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to upload photo");
+    }
+
+    const data = await res.json();
+    const inserted = data.photos[0];
+
+    setPhotos((prev) => [inserted, ...prev]);
+    setFolders((prev) =>
+      prev.map((folder) =>
+        folder.id === inserted.folderId
+          ? { ...folder, photoCount: folder.photoCount + 1 }
+          : folder,
+      ),
+    );
+  };
+
+  const addMultiplePhotos = async (
+    newPhotos: Omit<Photo, "id" | "likes" | "downloads" | "liked">[],
+  ) => {
+    const res = await fetch("/api/photos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photos: newPhotos }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to upload photos");
+    }
+
+    const data = await res.json();
+    const inserted = data.photos;
+
+    setPhotos((prev) => [...inserted, ...prev]);
+
+    if (inserted.length > 0) {
+      const folderId = inserted[0].folderId;
+      setFolders((prev) =>
+        prev.map((folder) =>
+          folder.id === folderId
+            ? { ...folder, photoCount: folder.photoCount + inserted.length }
+            : folder,
+        ),
+      );
+    }
+  };
+
+  const deletePhoto = async (id: string) => {
+    const photo = photos.find((p) => p.id === id);
+    if (!photo) return;
+
+    const res = await fetch(`/api/photos/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      throw new Error("Failed to delete photo");
+    }
+
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+    setFolders((prev) =>
+      prev.map((folder) =>
+        folder.id === photo.folderId
+          ? { ...folder, photoCount: Math.max(0, folder.photoCount - 1) }
+          : folder,
+      ),
+    );
+  };
+
+  const toggleLike = async (id: string) => {
+    const res = await fetch(`/api/photos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggleLike" }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Unable to update like status");
+    }
+
+    const updated = await res.json();
+    setPhotos((prev) =>
+      prev.map((photo) => (photo.id === id ? updated : photo)),
+    );
+  };
+
+  const downloadPhoto = async (id: string) => {
+    const res = await fetch(`/api/photos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "incrementDownloads" }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Unable to update download count");
+    }
+
+    const updated = await res.json();
+    setPhotos((prev) =>
+      prev.map((photo) => (photo.id === id ? updated : photo)),
+    );
+  };
 
   const getPhotosByFolder = (folderId: string) => {
-    return photos.filter(p => p.folderId === folderId)
-  }
+    return photos.filter((p) => p.folderId === folderId);
+  };
 
   return (
     <PhotosContext.Provider
@@ -224,13 +248,13 @@ export function PhotosProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
     </PhotosContext.Provider>
-  )
+  );
 }
 
 export function usePhotos() {
-  const context = useContext(PhotosContext)
+  const context = useContext(PhotosContext);
   if (context === undefined) {
-    throw new Error('usePhotos must be used within PhotosProvider')
+    throw new Error("usePhotos must be used within PhotosProvider");
   }
-  return context
+  return context;
 }

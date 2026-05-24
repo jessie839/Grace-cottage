@@ -1,146 +1,166 @@
-'use client'
+"use client";
 
-import { useState, useRef } from 'react'
-import { useAuth } from '../context/auth-context'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { MobileLayout } from '../components/mobile-layout'
-import { usePhotos } from '../context/photos-context'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Upload, X, FolderPlus, Image as ImageIcon } from 'lucide-react'
+import { useState, useRef } from "react";
+import { useAuth } from "../context/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { MobileLayout } from "../components/mobile-layout";
+import { usePhotos } from "../context/photos-context";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Upload, X, FolderPlus, Image as ImageIcon } from "lucide-react";
 
 export default function UploadPage() {
-  const { isLoggedIn } = useAuth()
-  const router = useRouter()
-  const { folders, addFolder, addMultiplePhotos } = usePhotos()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { isLoggedIn } = useAuth();
+  const router = useRouter();
+  const { folders, addFolder, addMultiplePhotos } = usePhotos();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [step, setStep] = useState<'folder' | 'photos'>('folder')
-  const [folderName, setFolderName] = useState('')
-  const [folderDesc, setFolderDesc] = useState('')
-  const [selectedFolderId, setSelectedFolderId] = useState('')
-  const [images, setImages] = useState<{ file: string; title: string; description: string; type: 'photo' | 'video' }[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [newFolderCreated, setNewFolderCreated] = useState(false)
+  const [step, setStep] = useState<"folder" | "photos">("folder");
+  const [folderName, setFolderName] = useState("");
+  const [folderDesc, setFolderDesc] = useState("");
+  const [selectedFolderId, setSelectedFolderId] = useState("");
+  const [images, setImages] = useState<
+    {
+      file: string;
+      title: string;
+      description: string;
+      type: "photo" | "video";
+    }[]
+  >([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [newFolderCreated, setNewFolderCreated] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [isLoggedIn, router])
+  }, [isLoggedIn, router]);
 
   if (!isLoggedIn) {
-    return null
+    return null;
   }
 
-  const handleCreateFolder = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
 
     if (!folderName.trim()) {
-      setError('Please enter a folder name')
-      return
+      setError("Please enter a folder name");
+      return;
     }
 
-    const newFolderId = addFolder(folderName, folderDesc)
-    setSelectedFolderId(newFolderId)
-    setFolderName('')
-    setFolderDesc('')
-    setNewFolderCreated(true)
-    setStep('photos')
-  }
+    try {
+      const newFolderId = await addFolder(folderName, folderDesc);
+      setSelectedFolderId(newFolderId);
+      setFolderName("");
+      setFolderDesc("");
+      setNewFolderCreated(true);
+      setStep("photos");
+    } catch {
+      setError("Unable to create folder. Please try again.");
+    }
+  };
 
   const handleSelectFolder = (folderId: string) => {
-    setSelectedFolderId(folderId)
-    setNewFolderCreated(false)
-    setStep('photos')
-  }
+    setSelectedFolderId(folderId);
+    setNewFolderCreated(false);
+    setStep("photos");
+  };
 
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files) {
       Array.from(files).forEach((file) => {
-        const isVideo = file.type.startsWith('video/')
-        const reader = new FileReader()
+        const isVideo = file.type.startsWith("video/");
+        const reader = new FileReader();
         reader.onload = (event) => {
           setImages((prev) => [
             ...prev,
             {
               file: event.target?.result as string,
-              title: file.name.replace(/\.[^.]*$/, ''),
-              description: '',
-              type: isVideo ? 'video' : 'photo',
+              title: file.name.replace(/\.[^.]*$/, ""),
+              description: "",
+              type: isVideo ? "video" : "photo",
             },
-          ])
-        }
-        reader.readAsDataURL(file)
-      })
+          ]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
-  }
+  };
 
   const handleRemoveImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
-  }
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  const handleUpdateImage = (index: number, field: 'title' | 'description', value: string) => {
+  const handleUpdateImage = (
+    index: number,
+    field: "title" | "description",
+    value: string,
+  ) => {
     setImages((prev) =>
-      prev.map((img, i) => (i === index ? { ...img, [field]: value } : img))
-    )
-  }
+      prev.map((img, i) => (i === index ? { ...img, [field]: value } : img)),
+    );
+  };
 
   const handleSubmitPhotos = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
 
     if (!selectedFolderId) {
-      setError('Please select a folder')
-      return
+      setError("Please select a folder");
+      return;
     }
 
     if (images.length === 0) {
-      setError('Please select at least one photo')
-      return
+      setError("Please select at least one photo");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
       const photosToAdd = images.map((img) => ({
-        title: img.title || (img.type === 'video' ? 'Untitled Video' : 'Untitled Photo'),
+        title:
+          img.title ||
+          (img.type === "video" ? "Untitled Video" : "Untitled Photo"),
         description: img.description,
-        image: img.type === 'video' ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Cpath d="M160 80 L160 220 L280 150 Z" fill="%23fff"/%3E%3C/svg%3E' : img.file,
-        video: img.type === 'video' ? img.file : undefined,
+        image:
+          img.type === "video"
+            ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Cpath d="M160 80 L160 220 L280 150 Z" fill="%23fff"/%3E%3C/svg%3E'
+            : img.file,
+        video: img.type === "video" ? img.file : undefined,
         folderId: selectedFolderId,
         uploadDate: new Date().toISOString(),
         type: img.type,
-      }))
+      }));
 
-      addMultiplePhotos(photosToAdd)
-      setImages([])
+      await addMultiplePhotos(photosToAdd);
+      setImages([]);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+        fileInputRef.current.value = "";
       }
 
       setTimeout(() => {
-        router.push('/gallery')
-      }, 1000)
+        router.push("/gallery");
+      }, 1000);
     } catch {
-      setError('Failed to upload photos')
+      setError("Failed to upload photos");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleBackToFolder = () => {
-    setStep('folder')
-    setImages([])
+    setStep("folder");
+    setImages([]);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   return (
     <MobileLayout>
@@ -152,13 +172,14 @@ export default function UploadPage() {
           className="mb-8"
         >
           <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-            {step === 'folder' ? 'Create or Select Folder' : 'Upload Photos'}
+            {step === "folder" ? "Create or Select Folder" : "Upload Photos"}
           </h1>
           <p className="text-muted-foreground">
-            {step === 'folder'
-              ? 'Organize your photos in folders'
+            {step === "folder"
+              ? "Organize your photos in folders"
               : `Upload unlimited photos to "${
-                  folders.find((f) => f.id === selectedFolderId)?.name || 'Selected Folder'
+                  folders.find((f) => f.id === selectedFolderId)?.name ||
+                  "Selected Folder"
                 }"`}
           </p>
         </motion.div>
@@ -174,7 +195,7 @@ export default function UploadPage() {
         )}
 
         {/* Step 1: Folder Selection */}
-        {step === 'folder' && (
+        {step === "folder" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -236,12 +257,17 @@ export default function UploadPage() {
                       onClick={() => handleSelectFolder(folder.id)}
                       className="p-4 text-left rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
                     >
-                      <h3 className="font-semibold text-foreground">{folder.name}</h3>
+                      <h3 className="font-semibold text-foreground">
+                        {folder.name}
+                      </h3>
                       {folder.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{folder.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {folder.description}
+                        </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-2">
-                        {folder.photoCount} photo{folder.photoCount !== 1 ? 's' : ''}
+                        {folder.photoCount} photo
+                        {folder.photoCount !== 1 ? "s" : ""}
                       </p>
                     </motion.button>
                   ))}
@@ -252,7 +278,7 @@ export default function UploadPage() {
         )}
 
         {/* Step 2: Photo Upload */}
-        {step === 'photos' && (
+        {step === "photos" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -263,7 +289,7 @@ export default function UploadPage() {
                 {/* Image Upload Area */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-3">
-                    Select Photos (Upload as many as you want) *
+                    Select photos or videos (Upload as many as you want) *
                   </label>
                   <button
                     type="button"
@@ -275,7 +301,8 @@ export default function UploadPage() {
                       Click to upload or drag and drop
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      Photos (PNG, JPG, GIF) or Videos (MP4, WebM, etc.) - No limit on number of files
+                      Photos or videos (PNG, JPG, GIF, MP4, WebM) - No limit on
+                      number of files
                     </span>
                   </button>
                   <input
@@ -292,7 +319,8 @@ export default function UploadPage() {
                 {images.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold text-foreground mb-4">
-                      {images.length} photo{images.length !== 1 ? 's' : ''} selected
+                      {images.length} item{images.length !== 1 ? "s" : ""}{" "}
+                      selected
                     </h3>
                     <div className="space-y-4 max-h-96 overflow-y-auto">
                       {images.map((img, index) => (
@@ -303,18 +331,31 @@ export default function UploadPage() {
                           className="p-4 rounded-lg border border-border bg-secondary/20"
                         >
                           <div className="flex gap-4">
-                            <img
-                              src={img.file}
-                              alt={`Preview ${index}`}
-                              className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                            />
+                            {img.type === "video" ? (
+                              <video
+                                src={img.file}
+                                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                                muted
+                                controls
+                              />
+                            ) : (
+                              <img
+                                src={img.file}
+                                alt={`Preview ${index}`}
+                                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                              />
+                            )}
                             <div className="flex-1 space-y-2">
                               <input
                                 type="text"
                                 placeholder="Photo title"
                                 value={img.title}
                                 onChange={(e) =>
-                                  handleUpdateImage(index, 'title', e.target.value)
+                                  handleUpdateImage(
+                                    index,
+                                    "title",
+                                    e.target.value,
+                                  )
                                 }
                                 className="w-full px-2 py-1 text-sm rounded bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                               />
@@ -323,7 +364,11 @@ export default function UploadPage() {
                                 placeholder="Photo description (optional)"
                                 value={img.description}
                                 onChange={(e) =>
-                                  handleUpdateImage(index, 'description', e.target.value)
+                                  handleUpdateImage(
+                                    index,
+                                    "description",
+                                    e.target.value,
+                                  )
                                 }
                                 className="w-full px-2 py-1 text-sm rounded bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                               />
@@ -357,7 +402,9 @@ export default function UploadPage() {
                     disabled={loading || images.length === 0}
                     className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
                   >
-                    {loading ? 'Uploading...' : `Upload ${images.length} File${images.length !== 1 ? 's' : ''}`}
+                    {loading
+                      ? "Uploading..."
+                      : `Upload ${images.length} File${images.length !== 1 ? "s" : ""}`}
                   </Button>
                 </div>
               </form>
@@ -366,5 +413,5 @@ export default function UploadPage() {
         )}
       </main>
     </MobileLayout>
-  )
+  );
 }

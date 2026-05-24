@@ -1,100 +1,103 @@
-'use client'
+"use client";
 
-import { useState, useRef } from 'react'
-import { useAuth } from '../context/auth-context'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { MobileLayout } from '../components/mobile-layout'
-import { PropertyCard } from '../components/property-card'
-import { Lightbox } from '../components/lightbox'
-import { useProperties } from '../context/properties-context'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Upload, X } from 'lucide-react'
+import { useState, useRef } from "react";
+import { useAuth } from "../context/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { MobileLayout } from "../components/mobile-layout";
+import { PropertyCard } from "../components/property-card";
+import { Lightbox } from "../components/lightbox";
+import { useProperties } from "../context/properties-context";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Upload, X } from "lucide-react";
 
 export default function PropertiesPage() {
-  const { isLoggedIn, isLoading } = useAuth()
-  const router = useRouter()
-  const { properties, addProperty, deleteProperty, addImagesToProperty } = useProperties()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
+  const { properties, addProperty, deleteProperty, addImagesToProperty } =
+    useProperties();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [showForm, setShowForm] = useState(false)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [images, setImages] = useState<string[]>([])
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [lightboxImages, setLightboxImages] = useState<string[]>([])
-  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [isLoggedIn, isLoading, router])
+  }, [isLoggedIn, isLoading, router]);
 
   if (isLoading || !isLoggedIn) {
-    return null
+    return null;
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files) {
       Array.from(files).forEach((file) => {
-        const reader = new FileReader()
+        const reader = new FileReader();
         reader.onload = (event) => {
-          setImages((prev) => [...prev, event.target?.result as string])
-          setError('')
-        }
-        reader.readAsDataURL(file)
-      })
+          setImages((prev) => [...prev, event.target?.result as string]);
+          setError("");
+        };
+        reader.readAsDataURL(file);
+      });
     }
-  }
+  };
 
   const handleRemoveImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
-  }
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
 
     if (!name.trim() || images.length === 0) {
-      setError('Please enter a property name and select at least one image')
-      return
+      setError(
+        "Please enter a property name and select at least one photo or video",
+      );
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
       addProperty({
         name: name.trim(),
         description: description.trim(),
         images,
-      })
+      });
 
-      setName('')
-      setDescription('')
-      setImages([])
+      setName("");
+      setDescription("");
+      setImages([]);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+        fileInputRef.current.value = "";
       }
-      setShowForm(false)
+      setShowForm(false);
     } catch {
-      setError('Failed to add property')
+      setError("Failed to add property");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleImageClick = (propertyImages: string[], index: number) => {
-    setLightboxImages(propertyImages)
-    setLightboxIndex(index)
-    setLightboxOpen(true)
-  }
+    setLightboxImages(propertyImages);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
 
   return (
     <MobileLayout>
@@ -110,14 +113,14 @@ export default function PropertiesPage() {
               Properties
             </h1>
             <p className="text-muted-foreground">
-              {properties.length} propert{properties.length !== 1 ? 'ies' : 'y'}
+              {properties.length} propert{properties.length !== 1 ? "ies" : "y"}
             </p>
           </div>
           <Button
             onClick={() => setShowForm(!showForm)}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
           >
-            {showForm ? 'Cancel' : 'Add Property'}
+            {showForm ? "Cancel" : "Add Property"}
           </Button>
         </motion.div>
 
@@ -140,12 +143,14 @@ export default function PropertiesPage() {
             className="mb-8"
           >
             <Card className="p-6 bg-card/50 backdrop-blur-sm">
-              <h2 className="text-xl font-semibold text-foreground mb-6">Add New Property</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-6">
+                Add New Property
+              </h2>
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Image Upload */}
+                {/* Media Upload */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-3">
-                    Property Images (Add multiple) *
+                    Property media (photos or videos) *
                   </label>
                   <button
                     type="button"
@@ -154,16 +159,16 @@ export default function PropertiesPage() {
                   >
                     <Upload className="w-8 h-8 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
-                      Click to upload photos
+                      Click to upload photos or videos
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      PNG, JPG or GIF - Multiple files supported
+                      PNG, JPG, GIF, MP4 or WebM - Multiple files supported
                     </span>
                   </button>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     multiple
                     onChange={handleImageChange}
                     className="hidden"
@@ -179,11 +184,20 @@ export default function PropertiesPage() {
                           animate={{ opacity: 1, scale: 1 }}
                           className="relative group"
                         >
-                          <img
-                            src={img}
-                            alt={`Preview ${index}`}
-                            className="w-full h-32 object-cover rounded-lg border-2 border-border"
-                          />
+                          {img.startsWith("data:video/") ? (
+                            <video
+                              src={img}
+                              className="w-full h-32 object-cover rounded-lg border-2 border-border"
+                              muted
+                              controls
+                            />
+                          ) : (
+                            <img
+                              src={img}
+                              alt={`Preview ${index}`}
+                              className="w-full h-32 object-cover rounded-lg border-2 border-border"
+                            />
+                          )}
                           <button
                             type="button"
                             onClick={() => handleRemoveImage(index)}
@@ -233,7 +247,7 @@ export default function PropertiesPage() {
                   disabled={loading}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
                 >
-                  {loading ? 'Adding...' : 'Add Property'}
+                  {loading ? "Adding..." : "Add Property"}
                 </Button>
               </form>
             </Card>
@@ -252,23 +266,26 @@ export default function PropertiesPage() {
                 key={property.id}
                 property={property}
                 index={index}
-                onImageClick={(imgIndex) => handleImageClick(property.images, imgIndex)}
+                onImageClick={(imgIndex) =>
+                  handleImageClick(property.images, imgIndex)
+                }
                 onDelete={() => {
                   if (confirm(`Delete "${property.name}"?`)) {
-                    deleteProperty(property.id)
+                    deleteProperty(property.id);
                   }
                 }}
-                onAddImages={(newImages) => addImagesToProperty(property.id, newImages)}
+                onAddImages={(newImages) =>
+                  addImagesToProperty(property.id, newImages)
+                }
               />
             ))}
           </motion.div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <Card className="p-12 text-center bg-card/50 backdrop-blur-sm">
-              <h3 className="text-lg font-semibold text-foreground mb-2">No properties yet</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                No properties yet
+              </h3>
               <p className="text-muted-foreground mb-4">
                 Add your first property to showcase your venues
               </p>
@@ -291,5 +308,5 @@ export default function PropertiesPage() {
         onClose={() => setLightboxOpen(false)}
       />
     </MobileLayout>
-  )
+  );
 }
