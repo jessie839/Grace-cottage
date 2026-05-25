@@ -152,7 +152,8 @@ export default function UploadPage() {
           formData.append("folder", folder);
         }
 
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${img.type}/upload`;
+        const resourceType = img.type === "video" ? "video" : "image";
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
         const uploadRes = await fetch(uploadUrl, {
           method: "POST",
           body: formData,
