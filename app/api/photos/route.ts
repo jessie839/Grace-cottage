@@ -27,6 +27,7 @@ export async function GET() {
       description: photo.description,
       image: photo.image,
       video: photo.video,
+      publicId: photo.publicId,
       folderId: photo.folderId,
       likes: photo.likes,
       downloads: photo.downloads,
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
     description: photo.description || "",
     image: photo.image,
     video: photo.video,
+    publicId: photo.publicId,
     folderId: photo.folderId,
     likes: 0,
     downloads: 0,
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
     toString: () => string;
   }[];
 
-  const inserted = docs.map((doc, index) => ({
+  const inserted = docs.map((doc: any, index: number) => ({
     id: insertedIds[index].toString(),
     ...doc,
   }));

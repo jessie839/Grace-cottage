@@ -16,6 +16,7 @@ export interface Photo {
   description: string;
   image: string;
   video?: string;
+  publicId?: string;
   folderId: string;
   likes: number;
   downloads: number;

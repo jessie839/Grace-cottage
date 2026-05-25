@@ -11,6 +11,16 @@ interface LightboxProps {
   onClose: () => void;
 }
 
+function checkIsVideo(url: string) {
+  if (!url) return false;
+  return (
+    url.startsWith("data:video/") ||
+    url.startsWith("video/") ||
+    url.includes("/video/upload/") ||
+    /\.(mp4|webm|ogg|mov|m4v)($|\?)/i.test(url)
+  );
+}
+
 export function Lightbox({
   isOpen,
   images,
@@ -66,8 +76,7 @@ export function Lightbox({
 
   const currentImage = images[currentIndex];
 
-  const isVideo =
-    currentImage.startsWith("data:video/") || currentImage.startsWith("video/");
+  const isVideo = checkIsVideo(currentImage);
 
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -194,7 +203,7 @@ export function Lightbox({
                     }`}
                     whileHover={{ scale: 1.05 }}
                   >
-                    {img.startsWith("data:video/") ? (
+                    {checkIsVideo(img) ? (
                       <video
                         src={img}
                         className="w-full h-full object-cover"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDatabase } from "@/lib/mongodb";
+import cloudinary from "@/lib/cloudinary";
 
 function normalizePhoto(photo: any) {
   return {
@@ -9,6 +10,7 @@ function normalizePhoto(photo: any) {
     description: photo.description,
     image: photo.image,
     video: photo.video,
+    publicId: photo.publicId,
     folderId: photo.folderId,
     likes: photo.likes,
     downloads: photo.downloads,
@@ -20,9 +22,9 @@ function normalizePhoto(photo: any) {
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = params;
+  const { id } = await params;
   if (!ObjectId.isValid(id)) {
     return NextResponse.json({ error: "Invalid photo id" }, { status: 400 });
   }
@@ -54,6 +56,7 @@ export async function PATCH(
       updateFields.description = body.description;
     if (typeof body.image === "string") updateFields.image = body.image;
     if (typeof body.video === "string") updateFields.video = body.video;
+    if (typeof body.publicId === "string") updateFields.publicId = body.publicId;
     if (typeof body.type === "string") updateFields.type = body.type;
     if (typeof body.folderId === "string")
       updateFields.folderId = body.folderId;
@@ -64,19 +67,33 @@ export async function PATCH(
   }
 
   const updated = await photos.findOne({ _id: new ObjectId(id) });
+  if (!updated) {
+    return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+  }
   return NextResponse.json(normalizePhoto(updated));
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = params;
+  const { id } = await params;
   if (!ObjectId.isValid(id)) {
     return NextResponse.json({ error: "Invalid photo id" }, { status: 400 });
   }
 
   const db = await getDatabase();
+  const photo = await db.collection("photos").findOne({ _id: new ObjectId(id) });
+  if (photo && photo.publicId) {
+    try {
+      await cloudinary.uploader.destroy(photo.publicId, {
+        resource_type: photo.type === "video" ? "video" : "image",
+      });
+    } catch (err) {
+      console.error("Failed to delete asset from Cloudinary:", err);
+    }
+  }
+
   await db.collection("photos").deleteOne({ _id: new ObjectId(id) });
   return NextResponse.json({ success: true });
 }

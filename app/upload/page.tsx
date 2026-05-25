@@ -10,7 +10,7 @@ import { usePhotos } from "../context/photos-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, X, FolderPlus, Image as ImageIcon } from "lucide-react";
+import { Upload, X, FolderPlus } from "lucide-react";
 
 export default function UploadPage() {
   const { isLoggedIn } = useAuth();
@@ -24,7 +24,8 @@ export default function UploadPage() {
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [images, setImages] = useState<
     {
-      file: string;
+      file: File;
+      previewUrl: string;
       title: string;
       description: string;
       type: "photo" | "video";
@@ -76,24 +77,26 @@ export default function UploadPage() {
     if (files) {
       Array.from(files).forEach((file) => {
         const isVideo = file.type.startsWith("video/");
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setImages((prev) => [
-            ...prev,
-            {
-              file: event.target?.result as string,
-              title: file.name.replace(/\.[^.]*$/, ""),
-              description: "",
-              type: isVideo ? "video" : "photo",
-            },
-          ]);
-        };
-        reader.readAsDataURL(file);
+        const previewUrl = URL.createObjectURL(file);
+        setImages((prev) => [
+          ...prev,
+          {
+            file,
+            previewUrl,
+            title: file.name.replace(/\.[^.]*$/, ""),
+            description: "",
+            type: isVideo ? "video" : "photo",
+          },
+        ]);
       });
     }
   };
 
   const handleRemoveImage = (index: number) => {
+    const img = images[index];
+    if (img && img.previewUrl) {
+      URL.revokeObjectURL(img.previewUrl);
+    }
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -117,29 +120,79 @@ export default function UploadPage() {
     }
 
     if (images.length === 0) {
-      setError("Please select at least one photo");
+      setError("Please select at least one photo or video");
       return;
     }
 
     setLoading(true);
     try {
-      const photosToAdd = images.map((img) => ({
-        title:
-          img.title ||
-          (img.type === "video" ? "Untitled Video" : "Untitled Photo"),
-        description: img.description,
-        image:
-          img.type === "video"
-            ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Cpath d="M160 80 L160 220 L280 150 Z" fill="%23fff"/%3E%3C/svg%3E'
-            : img.file,
-        video: img.type === "video" ? img.file : undefined,
-        folderId: selectedFolderId,
-        uploadDate: new Date().toISOString(),
-        type: img.type,
-      }));
+      const photosToAdd = [];
 
+      for (const img of images) {
+        // 1. Get signed parameters from our server route
+        const signRes = await fetch("/api/cloudinary-signature", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resourceType: img.type }),
+        });
+
+        if (!signRes.ok) {
+          throw new Error(`Failed to get upload signature for "${img.title}"`);
+        }
+
+        const { signature, timestamp, cloudName, apiKey, folder } = await signRes.json();
+
+        // 2. Upload the file directly to Cloudinary bypassing our backend
+        const formData = new FormData();
+        formData.append("file", img.file);
+        formData.append("api_key", apiKey);
+        formData.append("timestamp", timestamp.toString());
+        formData.append("signature", signature);
+        if (folder) {
+          formData.append("folder", folder);
+        }
+
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${img.type}/upload`;
+        const uploadRes = await fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json().catch(() => ({}));
+          throw new Error(
+            errData.error?.message || `Failed to upload "${img.title}" to Cloudinary`
+          );
+        }
+
+        const uploadData = await uploadRes.json();
+        const mediaUrl = uploadData.secure_url;
+        const publicId = uploadData.public_id;
+
+        photosToAdd.push({
+          title:
+            img.title ||
+            (img.type === "video" ? "Untitled Video" : "Untitled Photo"),
+          description: img.description,
+          image:
+            img.type === "video"
+              ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Cpath d="M160 80 L160 220 L280 150 Z" fill="%23fff"/%3E%3C/svg%3E'
+              : mediaUrl,
+          video: img.type === "video" ? mediaUrl : undefined,
+          publicId,
+          folderId: selectedFolderId,
+          uploadDate: new Date().toISOString(),
+          type: img.type,
+        });
+      }
+
+      // 3. Save all uploaded media metadata in one request
       await addMultiplePhotos(photosToAdd);
+      
+      // Clean up object URLs
+      images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
       setImages([]);
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -147,14 +200,16 @@ export default function UploadPage() {
       setTimeout(() => {
         router.push("/gallery");
       }, 1000);
-    } catch {
-      setError("Failed to upload photos");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to upload photos");
     } finally {
       setLoading(false);
     }
   };
 
   const handleBackToFolder = () => {
+    images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
     setStep("folder");
     setImages([]);
     if (fileInputRef.current) {
@@ -172,12 +227,12 @@ export default function UploadPage() {
           className="mb-8"
         >
           <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-            {step === "folder" ? "Create or Select Folder" : "Upload Photos"}
+            {step === "folder" ? "Create or Select Folder" : "Upload Photos & Videos"}
           </h1>
           <p className="text-muted-foreground">
             {step === "folder"
-              ? "Organize your photos in folders"
-              : `Upload unlimited photos to "${
+              ? "Organize your media in folders"
+              : `Upload unlimited files to "${
                   folders.find((f) => f.id === selectedFolderId)?.name ||
                   "Selected Folder"
                 }"`}
@@ -255,7 +310,7 @@ export default function UploadPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => handleSelectFolder(folder.id)}
-                      className="p-4 text-left rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
+                      className="p-4 text-left rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-left"
                     >
                       <h3 className="font-semibold text-foreground">
                         {folder.name}
@@ -266,7 +321,7 @@ export default function UploadPage() {
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-2">
-                        {folder.photoCount} photo
+                        {folder.photoCount} file
                         {folder.photoCount !== 1 ? "s" : ""}
                       </p>
                     </motion.button>
@@ -333,14 +388,14 @@ export default function UploadPage() {
                           <div className="flex gap-4">
                             {img.type === "video" ? (
                               <video
-                                src={img.file}
+                                src={img.previewUrl}
                                 className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                                 muted
                                 controls
                               />
                             ) : (
                               <img
-                                src={img.file}
+                                src={img.previewUrl}
                                 alt={`Preview ${index}`}
                                 className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                               />
@@ -348,7 +403,7 @@ export default function UploadPage() {
                             <div className="flex-1 space-y-2">
                               <input
                                 type="text"
-                                placeholder="Photo title"
+                                placeholder="File title"
                                 value={img.title}
                                 onChange={(e) =>
                                   handleUpdateImage(
@@ -361,7 +416,7 @@ export default function UploadPage() {
                               />
                               <input
                                 type="text"
-                                placeholder="Photo description (optional)"
+                                placeholder="Description (optional)"
                                 value={img.description}
                                 onChange={(e) =>
                                   handleUpdateImage(
@@ -376,7 +431,7 @@ export default function UploadPage() {
                             <button
                               type="button"
                               onClick={() => handleRemoveImage(index)}
-                              className="p-1 hover:bg-destructive/20 rounded transition-colors flex-shrink-0"
+                              className="p-1 hover:bg-destructive/20 rounded transition-colors flex-shrink-0 animate-none"
                             >
                               <X className="w-5 h-5 text-destructive" />
                             </button>
