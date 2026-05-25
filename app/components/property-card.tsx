@@ -3,7 +3,18 @@
 import { motion } from "framer-motion";
 import { Trash2, ZoomIn, Plus } from "lucide-react";
 import { Property } from "../context/properties-context";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { uploadToCloudinary } from "@/lib/upload-utils";
+
+function checkIsVideo(url: string) {
+  if (!url) return false;
+  return (
+    url.startsWith("data:video/") ||
+    url.startsWith("video/") ||
+    url.includes("/video/upload/") ||
+    /\.(mp4|webm|ogg|mov|m4v)($|\?)/i.test(url)
+  );
+}
 
 interface PropertyCardProps {
   property: Property;
@@ -21,17 +32,25 @@ export function PropertyCard({
   onAddImages,
 }: PropertyCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          onAddImages([event.target?.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
+      setIsUploading(true);
+      try {
+        const uploadResults = await uploadToCloudinary(Array.from(files));
+        const uploadedUrls = uploadResults.map((res) => res.url);
+        onAddImages(uploadedUrls);
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("Failed to upload media. Please try again.");
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
     }
   };
 
@@ -50,7 +69,7 @@ export function PropertyCard({
           onClick={() => onImageClick(0)}
           className="relative w-full aspect-video bg-muted overflow-hidden cursor-pointer flex items-center justify-center group/img flex-shrink-0"
         >
-          {property.images[0].startsWith("data:video/") ? (
+          {checkIsVideo(property.images[0]) ? (
             <video
               src={property.images[0]}
               className="w-full h-full object-cover"
@@ -116,11 +135,16 @@ export function PropertyCard({
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+            onClick={() => !isUploading && fileInputRef.current?.click()}
+            disabled={isUploading}
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isUploading
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-primary/10 text-primary hover:bg-primary/20"
+            }`}
           >
             <Plus className="w-4 h-4" />
-            Add Media
+            {isUploading ? "Uploading..." : "Add Media"}
           </motion.button>
         )}
 
@@ -143,7 +167,7 @@ export function PropertyCard({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
         onChange={handleAddImages}
         className="hidden"

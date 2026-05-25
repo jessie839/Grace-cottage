@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, X } from "lucide-react";
+import { uploadToCloudinary } from "@/lib/upload-utils";
 
 export default function PropertiesPage() {
   const { isLoggedIn, isLoading } = useAuth();
@@ -24,7 +25,9 @@ export default function PropertiesPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<
+    { file: File; previewUrl: string; type: string }[]
+  >([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -46,21 +49,26 @@ export default function PropertiesPage() {
     const files = e.target.files;
     if (files) {
       Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setImages((prev) => [...prev, event.target?.result as string]);
-          setError("");
-        };
-        reader.readAsDataURL(file);
+        const isVideo = file.type.startsWith("video/");
+        const previewUrl = URL.createObjectURL(file);
+        setImages((prev) => [
+          ...prev,
+          { file, previewUrl, type: isVideo ? "video" : "image" }
+        ]);
+        setError("");
       });
     }
   };
 
   const handleRemoveImage = (index: number) => {
+    const img = images[index];
+    if (img && img.previewUrl) {
+      URL.revokeObjectURL(img.previewUrl);
+    }
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -73,12 +81,16 @@ export default function PropertiesPage() {
 
     setLoading(true);
     try {
-      addProperty({
+      const uploadResults = await uploadToCloudinary(images.map((img) => img.file));
+      const uploadedUrls = uploadResults.map((res) => res.url);
+
+      await addProperty({
         name: name.trim(),
         description: description.trim(),
-        images,
+        images: uploadedUrls,
       });
 
+      images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
       setName("");
       setDescription("");
       setImages([]);
@@ -86,8 +98,9 @@ export default function PropertiesPage() {
         fileInputRef.current.value = "";
       }
       setShowForm(false);
-    } catch {
-      setError("Failed to add property");
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setError(err.message || "Failed to add property");
     } finally {
       setLoading(false);
     }
@@ -184,16 +197,16 @@ export default function PropertiesPage() {
                           animate={{ opacity: 1, scale: 1 }}
                           className="relative group"
                         >
-                          {img.startsWith("data:video/") ? (
+                          {img.type === "video" ? (
                             <video
-                              src={img}
+                              src={img.previewUrl}
                               className="w-full h-32 object-cover rounded-lg border-2 border-border"
                               muted
                               controls
                             />
                           ) : (
                             <img
-                              src={img}
+                              src={img.previewUrl}
                               alt={`Preview ${index}`}
                               className="w-full h-32 object-cover rounded-lg border-2 border-border"
                             />
@@ -269,14 +282,22 @@ export default function PropertiesPage() {
                 onImageClick={(imgIndex) =>
                   handleImageClick(property.images, imgIndex)
                 }
-                onDelete={() => {
+                onDelete={async () => {
                   if (confirm(`Delete "${property.name}"?`)) {
-                    deleteProperty(property.id);
+                    try {
+                      await deleteProperty(property.id);
+                    } catch (err: any) {
+                      alert(err.message || "Failed to delete property");
+                    }
                   }
                 }}
-                onAddImages={(newImages) =>
-                  addImagesToProperty(property.id, newImages)
-                }
+                onAddImages={async (newImages) => {
+                  try {
+                    await addImagesToProperty(property.id, newImages);
+                  } catch (err: any) {
+                    alert(err.message || "Failed to add media to property");
+                  }
+                }}
               />
             ))}
           </motion.div>
