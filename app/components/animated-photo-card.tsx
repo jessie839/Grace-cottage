@@ -34,30 +34,27 @@ export function AnimatedPhotoCard({
       <div className="h-full border border-border rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm hover:shadow-lg transition-shadow group">
         {/* Media */}
         <div className="relative w-full aspect-square overflow-hidden bg-muted">
-         {photo.type === "video" ? (
-  <video
-    src={photo.video}
-    poster={photo.image}
-    className="w-full h-full object-cover"
-    controls
-    playsInline
-    preload="metadata"
-  />
-) : (
-  <motion.img
-    src={photo.image}
-    alt={photo.title}
-    className="w-full h-full object-cover"
-    whileHover={{ scale: 1.1 }}
-    transition={{ duration: 0.3 }}
-  />
-)}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileHover={{ opacity: 1 }}
-            className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"
-          />
-        </div>
+  <p className="absolute top-1 left-1 z-50 bg-black text-white text-xs p-1">
+    {photo.type}
+  </p>
+
+  {photo.type === "video" ? (
+    <video
+      src={photo.video}
+      poster={photo.image}
+      className="w-full h-full object-cover"
+      controls
+      playsInline
+      preload="metadata"
+    />
+  ) : (
+    <img
+      src={photo.image}
+      alt={photo.title}
+      className="w-full h-full object-cover"
+    />
+  )}
+</div>
 
         {/* Content */}
         <div className="p-4">
