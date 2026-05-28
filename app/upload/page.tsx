@@ -188,8 +188,10 @@ export default function UploadPage() {
     ? `https://res.cloudinary.com/${cloudName}/video/upload/so_0/${publicId}.jpg`
     : mediaUrl,
 
-  video: img.type === "video" ? mediaUrl : "",
-
+video:
+  img.type === "video"
+    ? `https://res.cloudinary.com/${cloudName}/video/upload/sp_auto,q_auto/${publicId}.mp4`
+    : "",
   publicId,
 
   folderId: selectedFolderId,
