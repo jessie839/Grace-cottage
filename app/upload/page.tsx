@@ -191,7 +191,9 @@ export default function UploadPage() {
 
   uploadDate: new Date().toISOString(),
 
-  type: img.type,
+  type: img.file.type.startsWith("video/")
+  ? "video"
+  : "photo",
 });
       }
 
