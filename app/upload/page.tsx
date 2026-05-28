@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef } from "react";
 import { useAuth } from "../context/auth-context";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { MobileLayout } from "../components/mobile-layout";
 import { usePhotos } from "../context/photos-context";
@@ -23,7 +23,6 @@ export default function UploadPage() {
   const [folderDesc, setFolderDesc] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [uploadedBy, setUploadedBy] = useState("");
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [images, setImages] = useState<
     {
       file: File;
@@ -105,10 +104,10 @@ export default function UploadPage() {
   const handleUpdateImage = (
     index: number,
     field: "title" | "description",
-    value: string
+    value: string,
   ) => {
     setImages((prev) =>
-      prev.map((img, i) => (i === index ? { ...img, [field]: value } : img))
+      prev.map((img, i) => (i === index ? { ...img, [field]: value } : img)),
     );
   };
 
@@ -121,9 +120,10 @@ export default function UploadPage() {
       return;
     }
     if (!uploadedBy.trim()) {
-      setError("Please enter uploader name");
-      return;
-    }
+  setError("Please enter uploader name");
+  return;
+}
+
     if (images.length === 0) {
       setError("Please select at least one photo or video");
       return;
@@ -145,8 +145,7 @@ export default function UploadPage() {
           throw new Error(`Failed to get upload signature for "${img.title}"`);
         }
 
-        const { signature, timestamp, cloudName, apiKey, folder } =
-          await signRes.json();
+        const { signature, timestamp, cloudName, apiKey, folder } = await signRes.json();
 
         // 2. Upload the file directly to Cloudinary bypassing our backend
         const formData = new FormData();
@@ -168,8 +167,7 @@ export default function UploadPage() {
         if (!uploadRes.ok) {
           const errData = await uploadRes.json().catch(() => ({}));
           throw new Error(
-            errData.error?.message ||
-              `Failed to upload "${img.title}" to Cloudinary`
+            errData.error?.message || `Failed to upload "${img.title}" to Cloudinary`
           );
         }
 
@@ -178,29 +176,39 @@ export default function UploadPage() {
         const publicId = uploadData.public_id;
 
         photosToAdd.push({
-          title:
-            img.title ||
-            (img.type === "video" ? "Untitled Video" : "Untitled Photo"),
-          description: img.description,
-          image:
-            img.type === "video"
-              ? `https://res.cloudinary.com/${cloudName}/video/upload/so_0/${publicId}.jpg`
-              : `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/${publicId}`,
-          video:
-            img.type === "video"
-              ? `https://res.cloudinary.com/${cloudName}/video/upload/sp_auto/${publicId}.m3u8`
-              : "",
-          publicId,
-          folderId: selectedFolderId,
-          uploadDate: new Date().toISOString(),
-          uploadedBy,
-          type: img.file.type.startsWith("video/") ? "video" : "photo",
-        });
+  title:
+    img.title ||
+    (img.type === "video" ? "Untitled Video" : "Untitled Photo"),
+
+  description: img.description,
+
+  
+  image:
+  img.type === "video"
+    ? `https://res.cloudinary.com/${cloudName}/video/upload/so_0/${publicId}.jpg`
+    : `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/${publicId}`,
+
+video:
+  img.type === "video"
+    ? `https://res.cloudinary.com/${cloudName}/video/upload/sp_auto/${publicId}.m3u8`
+    : "",
+
+publicId,
+
+  folderId: selectedFolderId,
+
+  uploadDate: new Date().toISOString(),
+  uploadedBy,
+
+  type: img.file.type.startsWith("video/")
+  ? "video"
+  : "photo",
+});
       }
 
       // 3. Save all uploaded media metadata in one request
       await addMultiplePhotos(photosToAdd);
-
+      
       // Clean up object URLs
       images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
       setImages([]);
@@ -230,326 +238,261 @@ export default function UploadPage() {
   };
 
   return (
-    // ✅ FIX 1: Wrap in a fragment so the fullscreen overlay is actually rendered
-    <>
-      <MobileLayout>
-        <main className="w-full max-w-2xl mx-auto px-4 py-6 pb-24 md:pb-8">
-          {/* Header */}
+    <MobileLayout>
+      <main className="w-full max-w-2xl mx-auto px-4 py-6 pb-24 md:pb-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+            {step === "folder" ? "Create or Select Folder" : "Upload Photos & Videos"}
+          </h1>
+          <p className="text-muted-foreground">
+            {step === "folder"
+              ? "Organize your media in folders"
+              : `Upload unlimited files to "${
+                  folders.find((f) => f.id === selectedFolderId)?.name ||
+                  "Selected Folder"
+                }"`}
+          </p>
+        </motion.div>
+
+        {error && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm"
           >
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              {step === "folder"
-                ? "Create or Select Folder"
-                : "Upload Photos & Videos"}
-            </h1>
-            <p className="text-muted-foreground">
-              {step === "folder"
-                ? "Organize your media in folders"
-                : `Upload unlimited files to "${
-                    folders.find((f) => f.id === selectedFolderId)?.name ||
-                    "Selected Folder"
-                  }"`}
-            </p>
+            {error}
           </motion.div>
+        )}
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm"
-            >
-              {error}
-            </motion.div>
-          )}
+        {/* Step 1: Folder Selection */}
+        {step === "folder" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6"
+          >
+            {/* Create New Folder */}
+            <Card className="p-6 bg-card/50 backdrop-blur-sm">
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                <FolderPlus className="w-5 h-5" />
+                Create New Folder
+              </h2>
+              <form onSubmit={handleCreateFolder} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Folder Name *
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="e.g., Summer Party 2024"
+                    value={folderName}
+                    onChange={(e) => setFolderName(e.target.value)}
+                    className="bg-input border-border"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    placeholder="Describe this event..."
+                    value={folderDesc}
+                    onChange={(e) => setFolderDesc(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                >
+                  Create Folder
+                </Button>
+              </form>
+            </Card>
 
-          {/* Step 1: Folder Selection */}
-          {step === "folder" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-6"
-            >
-              {/* Create New Folder */}
-              <Card className="p-6 bg-card/50 backdrop-blur-sm">
-                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <FolderPlus className="w-5 h-5" />
-                  Create New Folder
+            {/* Existing Folders */}
+            {folders.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold text-foreground mb-4">
+                  Or Select Existing Folder
                 </h2>
-                <form onSubmit={handleCreateFolder} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {folders.map((folder, index) => (
+                    <motion.button
+                      key={folder.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => handleSelectFolder(folder.id)}
+                      className="p-4 text-left rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-left"
+                    >
+                      <h3 className="font-semibold text-foreground">
+                        {folder.name}
+                      </h3>
+                      {folder.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {folder.description}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {folder.photoCount} file
+                        {folder.photoCount !== 1 ? "s" : ""}
+                      </p>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Step 2: Photo Upload */}
+        {step === "photos" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6"
+          >
+            <Card className="p-6 bg-card/50 backdrop-blur-sm">
+              <form onSubmit={handleSubmitPhotos} className="space-y-6">
+                <div> 
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                     Uploaded By * 
+                     </label> 
+                     <Input type="text" placeholder="Enter your name" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} className="bg-input border-border" /> 
+                     </div>
+                {/* Image Upload Area */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-3">
+                    Select photos or videos (Upload as many as you want) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-border rounded-lg p-8 hover:border-primary hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Upload className="w-8 h-8 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">
+                      Click to upload or drag and drop
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Photos or videos (PNG, JPG, GIF, MP4, WebM) - No limit on
+                      number of files
+                    </span>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={handleImagesChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Image Previews */}
+                {images.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Folder Name *
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., Summer Party 2024"
-                      value={folderName}
-                      onChange={(e) => setFolderName(e.target.value)}
-                      className="bg-input border-border"
-                    />
+                    <h3 className="text-sm font-semibold text-foreground mb-4">
+                      {images.length} item{images.length !== 1 ? "s" : ""}{" "}
+                      selected
+                    </h3>
+                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                      {images.map((img, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="p-4 rounded-lg border border-border bg-secondary/20"
+                        >
+                          <div className="flex gap-4">
+                            {img.type === "video" ? (
+                              <video
+                                src={img.previewUrl}
+                                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                                muted
+                                controls
+                              />
+                            ) : (
+                              <img
+                                src={img.previewUrl}
+                                alt={`Preview ${index}`}
+                                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                              />
+                            )}
+                            <div className="flex-1 space-y-2">
+                              <input
+                                type="text"
+                                placeholder="File title"
+                                value={img.title}
+                                onChange={(e) =>
+                                  handleUpdateImage(
+                                    index,
+                                    "title",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-sm rounded bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Description (optional)"
+                                value={img.description}
+                                onChange={(e) =>
+                                  handleUpdateImage(
+                                    index,
+                                    "description",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-sm rounded bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(index)}
+                              className="p-1 hover:bg-destructive/20 rounded transition-colors flex-shrink-0 animate-none"
+                            >
+                              <X className="w-5 h-5 text-destructive" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Description (Optional)
-                    </label>
-                    <textarea
-                      placeholder="Describe this event..."
-                      value={folderDesc}
-                      onChange={(e) => setFolderDesc(e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                    />
-                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBackToFolder}
+                    className="flex-1"
+                  >
+                    Back
+                  </Button>
                   <Button
                     type="submit"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                    disabled={loading || images.length === 0}
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
                   >
-                    Create Folder
+                    {loading
+                      ? "Uploading..."
+                      : `Upload ${images.length} File${images.length !== 1 ? "s" : ""}`}
                   </Button>
-                </form>
-              </Card>
-
-              {/* Existing Folders */}
-              {folders.length > 0 && (
-                <div>
-                  <h2 className="text-xl font-semibold text-foreground mb-4">
-                    Or Select Existing Folder
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {folders.map((folder, index) => (
-                      <motion.button
-                        key={folder.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        onClick={() => handleSelectFolder(folder.id)}
-                        className="p-4 text-left rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
-                      >
-                        <h3 className="font-semibold text-foreground">
-                          {folder.name}
-                        </h3>
-                        {folder.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {folder.description}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {folder.photoCount} file
-                          {folder.photoCount !== 1 ? "s" : ""}
-                        </p>
-                      </motion.button>
-                    ))}
-                  </div>
                 </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* Step 2: Photo Upload */}
-          {step === "photos" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-6"
-            >
-              <Card className="p-6 bg-card/50 backdrop-blur-sm">
-                <form onSubmit={handleSubmitPhotos} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Uploaded By *
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="Enter your name"
-                      value={uploadedBy}
-                      onChange={(e) => setUploadedBy(e.target.value)}
-                      className="bg-input border-border"
-                    />
-                  </div>
-
-                  {/* Image Upload Area */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-3">
-                      Select photos or videos (Upload as many as you want) *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full border-2 border-dashed border-border rounded-lg p-8 hover:border-primary hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Upload className="w-8 h-8 text-muted-foreground" />
-                      <span className="text-sm font-medium text-foreground">
-                        Click to upload or drag and drop
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Photos or videos (PNG, JPG, GIF, MP4, WebM) - No limit
-                        on number of files
-                      </span>
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*,video/*"
-                      multiple
-                      onChange={handleImagesChange}
-                      className="hidden"
-                    />
-                  </div>
-
-                  {/* Image Previews */}
-                  {images.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground mb-4">
-                        {images.length} item{images.length !== 1 ? "s" : ""}{" "}
-                        selected
-                      </h3>
-                      <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {images.map((img, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="p-4 rounded-lg border border-border bg-secondary/20"
-                          >
-                            <div className="flex gap-4">
-                              {img.type === "video" ? (
-                                <video
-                                  src={img.previewUrl}
-                                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                                  muted
-                                  controls
-                                />
-                              ) : (
-                                // ✅ FIX 2: stopPropagation so parent containers don't swallow the click
-                                <img
-                                  src={img.previewUrl}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setFullscreenImage(img.previewUrl);
-                                  }}
-                                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0 cursor-pointer hover:opacity-80 transition"
-                                  alt="preview"
-                                />
-                              )}
-                              <div className="flex-1 space-y-2">
-                                <input
-                                  type="text"
-                                  placeholder="File title"
-                                  value={img.title}
-                                  onChange={(e) =>
-                                    handleUpdateImage(
-                                      index,
-                                      "title",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 text-sm rounded bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                />
-                                <input
-                                  type="text"
-                                  placeholder="Description (optional)"
-                                  value={img.description}
-                                  onChange={(e) =>
-                                    handleUpdateImage(
-                                      index,
-                                      "description",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 text-sm rounded bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                />
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveImage(index)}
-                                className="p-1 hover:bg-destructive/20 rounded transition-colors flex-shrink-0 animate-none"
-                              >
-                                <X className="w-5 h-5 text-destructive" />
-                              </button>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBackToFolder}
-                      className="flex-1"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={loading || images.length === 0}
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
-                    >
-                      {loading
-                        ? "Uploading..."
-                        : `Upload ${images.length} File${
-                            images.length !== 1 ? "s" : ""
-                          }`}
-                    </Button>
-                  </div>
-                </form>
-              </Card>
-            </motion.div>
-          )}
-        </main>
-      </MobileLayout>
-
-      {/* ✅ Portal renders directly into document.body — bypasses ANY parent overflow/z-index/stacking issues */}
-      {fullscreenImage &&
-        createPortal(
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 99999,
-              backgroundColor: "rgba(0,0,0,0.92)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onClick={() => setFullscreenImage(null)}
-          >
-            <img
-              src={fullscreenImage}
-              style={{
-                maxWidth: "95vw",
-                maxHeight: "95vh",
-                objectFit: "contain",
-                borderRadius: "8px",
-              }}
-              alt="Fullscreen preview"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              onClick={() => setFullscreenImage(null)}
-              style={{
-                position: "absolute",
-                top: "16px",
-                right: "16px",
-                color: "white",
-                fontSize: "28px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                lineHeight: 1,
-              }}
-            >
-              ✕
-            </button>
-          </div>,
-          document.body
+              </form>
+            </Card>
+          </motion.div>
         )}
-    </>
+      </main>
+    </MobileLayout>
   );
 }
