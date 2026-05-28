@@ -23,6 +23,7 @@ export default function UploadPage() {
   const [folderDesc, setFolderDesc] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [uploadedBy, setUploadedBy] = useState("");
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [images, setImages] = useState<
     {
       file: File;
@@ -421,10 +422,11 @@ publicId,
                               />
                             ) : (
                               <img
-                                src={img.previewUrl}
-                                alt={`Preview ${index}`}
-                                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                              />
+  src={img.previewUrl}
+  alt={`Preview ${index}`}
+  onClick={() => setFullscreenImage(img.previewUrl)}
+  className="w-20 h-20 object-cover rounded-lg flex-shrink-0 cursor-pointer hover:opacity-80 transition"
+/>
                             )}
                             <div className="flex-1 space-y-2">
                               <input
@@ -493,6 +495,26 @@ publicId,
           </motion.div>
         )}
       </main>
+      {fullscreenImage && (
+  <div
+    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+    onClick={() => setFullscreenImage(null)}
+  >
+    <img
+      src={fullscreenImage}
+      className="max-w-[95%] max-h-[95%] object-contain rounded-lg"
+      alt="Fullscreen"
+    />
+
+    {/* Close button */}
+    <button
+      onClick={() => setFullscreenImage(null)}
+      className="absolute top-4 right-4 text-white text-2xl"
+    >
+      ✕
+    </button>
+  </div>
+)}
     </MobileLayout>
   );
 }
