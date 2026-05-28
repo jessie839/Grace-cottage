@@ -22,6 +22,7 @@ export default function UploadPage() {
   const [folderName, setFolderName] = useState("");
   const [folderDesc, setFolderDesc] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState("");
+  const [uploadedBy, setUploadedBy] = useState("");
   const [images, setImages] = useState<
     {
       file: File;
@@ -118,6 +119,10 @@ export default function UploadPage() {
       setError("Please select a folder");
       return;
     }
+    if (!uploadedBy.trim()) {
+  setError("Please enter uploader name");
+  return;
+}
 
     if (images.length === 0) {
       setError("Please select at least one photo or video");
@@ -190,6 +195,7 @@ export default function UploadPage() {
   folderId: selectedFolderId,
 
   uploadDate: new Date().toISOString(),
+  uploadedBy,
 
   type: img.file.type.startsWith("video/")
   ? "video"
@@ -352,6 +358,12 @@ export default function UploadPage() {
           >
             <Card className="p-6 bg-card/50 backdrop-blur-sm">
               <form onSubmit={handleSubmitPhotos} className="space-y-6">
+                <div> 
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                     Uploaded By * 
+                     </label> 
+                     <Input type="text" placeholder="Enter your name" value={uploadedBy} onChange={(e) => setUploadedBy(e.target.value)} className="bg-input border-border" /> 
+                     </div>
                 {/* Image Upload Area */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-3">

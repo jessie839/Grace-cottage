@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
     video: photo.video,
     publicId: photo.publicId,
     folderId: photo.folderId,
+    uploadedBy: photo.uploadedBy,
     likes: 0,
     downloads: 0,
     uploadDate: photo.uploadDate || new Date().toISOString(),
