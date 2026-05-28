@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/auth-context";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { MobileLayout } from "../components/mobile-layout";
 import { usePhotos } from "../context/photos-context";
@@ -505,25 +505,51 @@ export default function UploadPage() {
         </main>
       </MobileLayout>
 
-      {/* ✅ FIX 1: Fullscreen overlay is now outside MobileLayout but inside the fragment — it will render correctly */}
-      {fullscreenImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-          onClick={() => setFullscreenImage(null)}
-        >
-          <img
-            src={fullscreenImage}
-            className="max-w-[95%] max-h-[95%] object-contain rounded-lg"
-            alt="Fullscreen preview"
-          />
-          <button
+      {/* ✅ Portal renders directly into document.body — bypasses ANY parent overflow/z-index/stacking issues */}
+      {fullscreenImage &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              backgroundColor: "rgba(0,0,0,0.92)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
             onClick={() => setFullscreenImage(null)}
-            className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 transition-colors"
           >
-            ✕
-          </button>
-        </div>
-      )}
+            <img
+              src={fullscreenImage}
+              style={{
+                maxWidth: "95vw",
+                maxHeight: "95vh",
+                objectFit: "contain",
+                borderRadius: "8px",
+              }}
+              alt="Fullscreen preview"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setFullscreenImage(null)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                color: "white",
+                fontSize: "28px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          </div>,
+          document.body
+        )}
     </>
   );
 }
