@@ -34,22 +34,24 @@ export function AnimatedPhotoCard({
       <div className="h-full border border-border rounded-lg overflow-hidden bg-card/50 backdrop-blur-sm hover:shadow-lg transition-shadow group">
         {/* Media */}
         <div className="relative w-full aspect-square overflow-hidden bg-muted">
-          {photo.type === "video" ? (
-            <video
-              src={photo.video || photo.image}
-              className="w-full h-full object-cover"
-              controls
-              muted
-            />
-          ) : (
-            <motion.img
-              src={photo.image}
-              alt={photo.title}
-              className="w-full h-full object-cover"
-              whileHover={{ scale: 1.1 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
+         {photo.type === "video" ? (
+  <video
+    src={photo.video}
+    poster={photo.image}
+    className="w-full h-full object-cover"
+    controls
+    playsInline
+    preload="metadata"
+  />
+) : (
+  <motion.img
+    src={photo.image}
+    alt={photo.title}
+    className="w-full h-full object-cover"
+    whileHover={{ scale: 1.1 }}
+    transition={{ duration: 0.3 }}
+  />
+)}
           <motion.div
             initial={{ opacity: 0 }}
             whileHover={{ opacity: 1 }}

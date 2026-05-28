@@ -171,20 +171,27 @@ export default function UploadPage() {
         const publicId = uploadData.public_id;
 
         photosToAdd.push({
-          title:
-            img.title ||
-            (img.type === "video" ? "Untitled Video" : "Untitled Photo"),
-          description: img.description,
-          image:
-            img.type === "video"
-              ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Cpath d="M160 80 L160 220 L280 150 Z" fill="%23fff"/%3E%3C/svg%3E'
-              : mediaUrl,
-          video: img.type === "video" ? mediaUrl : undefined,
-          publicId,
-          folderId: selectedFolderId,
-          uploadDate: new Date().toISOString(),
-          type: img.type,
-        });
+  title:
+    img.title ||
+    (img.type === "video" ? "Untitled Video" : "Untitled Photo"),
+
+  description: img.description,
+
+  image:
+    img.type === "video"
+      ? uploadData.secure_url.replace(/\.(mp4|mov|webm)$/i, ".jpg")
+      : mediaUrl,
+
+  video: img.type === "video" ? mediaUrl : "",
+
+  publicId,
+
+  folderId: selectedFolderId,
+
+  uploadDate: new Date().toISOString(),
+
+  type: img.type,
+});
       }
 
       // 3. Save all uploaded media metadata in one request
