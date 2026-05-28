@@ -25,7 +25,7 @@ export default function LoginPage() {
       if (success) {
         router.push('/')
       } else {
-        setError('Invalid credentials. Use graceadmin/grace123')
+        setError('Invalid credentials.')
       }
     } catch {
       setError('An error occurred')
@@ -56,7 +56,7 @@ export default function LoginPage() {
               <label className="text-sm font-medium text-foreground">Username</label>
               <Input
                 type="text"
-                placeholder="graceadmin"
+                placeholder="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={loading}
@@ -68,7 +68,7 @@ export default function LoginPage() {
               <label className="text-sm font-medium text-foreground">Password</label>
               <Input
                 type="password"
-                placeholder="grace123"
+                placeholder="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
@@ -85,14 +85,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Demo Info */}
-          <div className="mt-8 p-4 bg-secondary/20 rounded-lg border border-secondary">
-            <p className="text-xs text-muted-foreground text-center">
-              <strong>Demo Credentials:</strong><br />
-              Username: graceadmin<br />
-              Password: grace123
-            </p>
-          </div>
+         
         </div>
       </Card>
     </div>
