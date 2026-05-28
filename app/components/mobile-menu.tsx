@@ -67,13 +67,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             >
               Properties
             </Link>
-            <Link
-              href="/events"
-              onClick={onClose}
-              className="block px-4 py-3 rounded-lg hover:bg-secondary/50 transition-colors text-foreground"
-            >
-              Events
-            </Link>
+            
             <Link
               href="/settings"
               onClick={onClose}
