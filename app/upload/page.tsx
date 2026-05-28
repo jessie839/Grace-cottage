@@ -421,12 +421,17 @@ publicId,
                                 controls
                               />
                             ) : (
-                              <img
-  src={img.previewUrl}
-  alt={`Preview ${index}`}
+                             <button
+  type="button"
   onClick={() => setFullscreenImage(img.previewUrl)}
-  className="w-20 h-20 object-cover rounded-lg flex-shrink-0 cursor-pointer hover:opacity-80 transition"
-/>
+  className="w-20 h-20 flex-shrink-0"
+>
+  <img
+    src={img.previewUrl}
+    className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
+    alt="preview"
+  />
+</button>
                             )}
                             <div className="flex-1 space-y-2">
                               <input
