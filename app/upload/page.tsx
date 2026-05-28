@@ -177,10 +177,11 @@ export default function UploadPage() {
 
   description: img.description,
 
-  image:
-    img.type === "video"
-      ? uploadData.secure_url.replace(/\.(mp4|mov|webm)$/i, ".jpg")
-      : mediaUrl,
+  
+   image:
+  img.type === "video"
+    ? `https://res.cloudinary.com/${cloudName}/video/upload/so_0/${publicId}.jpg`
+    : mediaUrl,
 
   video: img.type === "video" ? mediaUrl : "",
 
